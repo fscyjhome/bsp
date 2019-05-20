@@ -1,0 +1,105 @@
+bsp是shadowsocks多用户、流量、限时管理接口
+
+支持shadowsocks-python和shadowsocks-Go
+
+使用bsp之前，请先保证你的ss多用户配置可以生效（配置文件不起作用的话用本工具也没用），配置文件大概是这样
+
+{
+    "fast_open": false, 
+    "local_address": "127.0.0.1", 
+    "local_port": 1080, 
+    "method": "aes-256-cfb", 
+    "port_password": {
+        "1214": "123456", 
+        "1314": "123456"
+    }, 
+    "server": "0.0.0.0", 
+    "timeout": 300
+}
+如果可以，那么安装bsp吧
+
+1.安装
+
+git clone https://github.com/edboffical/bsp.git
+cd bsp
+chmod 775 install
+./install
+2.使用
+
+说实话bsp的错误处理我没怎么写，如果要把这个写到位的话，代码篇幅还要长得多，但是没必要，这样实现了核心功能，也方便你们阅读。关于使用，记住准则，程序就会正常运行。
+
+bsp的参数只有三个：
+
+-p 端口
+
+-P 密码
+
+-s 限额(以MB为单位)
+
+bsp的操作有如下：
+
+-a 增加端口监听规则所需参数-p 示例-p 8989
+
+-A 增加端口限额所需参数-p -s 示例-p 8989 -s 1000
+
+-j 增加端口上网账户所需参数-p -P 示例-p 8989 -s 123456
+
+-c 查看端口流量使用状况所需参数-p
+
+-d 删除端口监听规则所需参数-p
+
+-D 删除端口上网账号所需参数-p
+
+-O 查看端口上网密码所需参数-p
+
+-R 移除端口限额所需参数-p
+
+-r 从limit表里遍历端口自动添加监听规则(可用于服务器重启后监听规则添加) 无需参数
+
+--version 查看bsp版本信息
+
+--start 启动bsp后台运行监听
+
+--stop 终止bsp后台运行监听
+
+以增加8989端口上网账号密码123456为例那么命令就是
+
+bsp -p 8989 -P 123456 -j
+即bsp的命令格式为：bsp + 参数+ 操作
+
+但是千万要注意，对于一个端口的流量控制操作，必须要完成三个添加：添加了端口上网账号，添加了端口限额，添加了端口监听规则，缺一不可！所以并不推荐单参数操作，推荐使用如下命令增加、删除
+
+#增加8989端口上网账户密码为123456限额100MB
+bsp -p 8989 -P 123456 -s 100 -a -A -j
+#删除命令
+bsp -p 8989 -d -D -R
+另外要注意一点，因为服务器重启之后iptables所有的规则都会被清除，这会导致bsp无法正常运行，所以服务器重启后一定要用如下命令从配置文件的limit表里遍历端口并增加规则
+
+bsp -r
+添加完之后就可以启动bsp后台运行监听了，用如下命令：
+
+注意：一定要运行后台监听后，流量用完才会自动删除对应账号和规则！！
+
+bsp --start
+如果你没有增加任何端口限制，即配置文件里port_limit表数据为空的时候，你启动bsp后台运行监听，会提示：without any limit bsp stoped，并退出。因为没有任何端口需要监控，当一个端口使用流量达到限额时，bsp会自动删除端口上网账号，端口监听规则，和配置文件的端口限额配置，同样，当所有的端口都删完后，bsp会自动结束后台监听运行。
+
+3.配置文件
+
+bsp配置文件路径:/etc/byte/byte_ss.json
+
+{
+    "ssconf_path":"/etc/shadowsocks-python/config.json", ----shadowsocks多用户配置文件路径
+    "ress_cmd":"/etc/init.d/shadowsocks-python restart", ----shadowsocks重启命令
+    "update_time":"180",                                 ----bsp流量使用情况更新时间（ss重启/端口生效时间），单位s
+    "port_limit": {                                      ----端口limit表
+      "8989":"100"                                                                  
+    }
+}
+除端口limit表无需手动添加修改外，其他参数请自行填写
+
+4.卸载
+
+git clone https://github.com/edboffical/bsp.git
+cd bsp
+chmod 775 uninstall
+./uninstall
